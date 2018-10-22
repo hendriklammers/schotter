@@ -25,15 +25,28 @@ import Svg.Attributes
 main : Program () Model Msg
 main =
     Browser.element
-        { init =
-            \_ ->
-                ( []
-                , Random.generate RandomNumbers randomGenerator
-                )
+        { init = init
         , subscriptions = \_ -> Sub.none
         , update = update
         , view = view
         }
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    let
+        model =
+            { squares = []
+            , rows = 22
+            , columns = 12
+            , size = 30
+            }
+    in
+    ( model
+    , (model.rows * model.columns)
+        |> randomGenerator
+        |> Random.generate RandomNumbers
+    )
 
 
 
@@ -41,7 +54,11 @@ main =
 
 
 type alias Model =
-    List Square
+    { squares : List Square
+    , rows : Int
+    , columns : Int
+    , size : Int
+    }
 
 
 type alias Position =
@@ -57,40 +74,21 @@ type alias Square =
     }
 
 
-type alias Dimensions =
-    { rows : Int
-    , columns : Int
-    , size : Int
-    }
+randomGenerator : Int -> Random.Generator (List Float)
+randomGenerator amount =
+    Random.list amount (Random.float 0 1)
 
 
-dimensions : Dimensions
-dimensions =
-    { columns = 12
-    , rows = 22
-    , size = 30
-    }
-
-
-randomGenerator : Random.Generator (List Float)
-randomGenerator =
-    Random.list (dimensions.rows * dimensions.columns) (Random.float 0 1)
-
-
-
--- math.Pow(row/numRows, 1.5)
-
-
-squares : List Float -> List Square
-squares randoms =
+createSquares : Model -> List Float -> List Square
+createSquares { rows, columns, size } randoms =
     let
         square index random =
             let
                 row =
-                    index // dimensions.columns * 5
+                    index // columns * 5
 
                 rotation =
-                    floor ((random * 2 - 1) * toFloat row * 0.3 * (toFloat dimensions.rows / toFloat dimensions.columns ^ 1.5))
+                    floor ((random * 2 - 1) * toFloat row * 0.3 * (toFloat rows / toFloat columns ^ 1.5))
 
                 offset =
                     { x = rotation
@@ -98,20 +96,15 @@ squares randoms =
                     }
 
                 position =
-                    positionSquare dimensions index
+                    { x = modBy columns index * size
+                    , y = (index // columns) * size
+                    }
             in
-            Square dimensions.size (add position offset) rotation
+            Square size (add position offset) rotation
     in
     List.map2 square
-        (List.range 0 (dimensions.columns * dimensions.rows - 1))
+        (List.range 0 (rows - 1))
         randoms
-
-
-positionSquare : Dimensions -> Int -> Position
-positionSquare { columns, size } index =
-    { x = modBy columns index * size
-    , y = (index // columns) * size
-    }
 
 
 add : Position -> Position -> Position
@@ -133,7 +126,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         RandomNumbers randoms ->
-            ( squares randoms, Cmd.none )
+            ( { model | squares = createSquares model randoms }, Cmd.none )
 
 
 
@@ -166,13 +159,20 @@ viewSquare { size, position, rotation } =
 
 
 view : Model -> Html Msg
-view model =
+view { squares, rows, columns, size } =
+    let
+        w =
+            columns * size + size * 2 |> String.fromInt
+
+        h =
+            rows * size + size |> String.fromInt
+    in
     svg
-        [ width "420"
-        , height "690"
-        , viewBox "0 0 420 690"
+        [ width w
+        , height h
+        , viewBox ("0 0 " ++ w ++ " " ++ h)
         ]
         [ g
-            [ transform "translate(30 0)" ]
-            (List.map viewSquare model)
+            [ transform ("translate(" ++ String.fromInt size ++ " 0)") ]
+            (List.map viewSquare squares)
         ]

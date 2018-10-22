@@ -74,46 +74,6 @@ type alias Square =
     }
 
 
-randomGenerator : Int -> Random.Generator (List Float)
-randomGenerator amount =
-    Random.list amount (Random.float 0 1)
-
-
-createSquares : Model -> List Float -> List Square
-createSquares { rows, columns, size } randoms =
-    let
-        square index random =
-            let
-                row =
-                    index // columns * 5
-
-                rotation =
-                    floor ((random * 2 - 1) * toFloat row * 0.3 * (toFloat rows / toFloat columns ^ 1.5))
-
-                offset =
-                    { x = rotation
-                    , y = rotation
-                    }
-
-                position =
-                    { x = modBy columns index * size
-                    , y = (index // columns) * size
-                    }
-            in
-            Square size (add position offset) rotation
-    in
-    List.map2 square
-        (List.range 0 (rows - 1))
-        randoms
-
-
-add : Position -> Position -> Position
-add a b =
-    { x = a.x + b.x
-    , y = a.y + b.y
-    }
-
-
 
 -- UPDATE
 
@@ -127,6 +87,38 @@ update msg model =
     case msg of
         RandomNumbers randoms ->
             ( { model | squares = createSquares model randoms }, Cmd.none )
+
+
+randomGenerator : Int -> Random.Generator (List Float)
+randomGenerator amount =
+    Random.list amount (Random.float 0 1)
+
+
+createSquares : Model -> List Float -> List Square
+createSquares model randoms =
+    List.map2 (createSquare model)
+        (List.range 0 (model.rows * model.columns - 1))
+        randoms
+
+
+createSquare : Model -> Int -> Float -> Square
+createSquare { rows, columns, size } index random =
+    let
+        row =
+            index // columns * 5
+
+        damp =
+            toFloat rows / toFloat columns ^ 1.5
+
+        offset =
+            floor ((random * 2 - 1) * toFloat row * 0.3 * damp)
+
+        position =
+            { x = modBy columns index * size + offset
+            , y = (index // columns) * size + offset
+            }
+    in
+    Square size position offset
 
 
 

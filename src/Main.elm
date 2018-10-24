@@ -62,9 +62,7 @@ type alias Model =
 
 
 type alias Position =
-    { x : Int
-    , y : Int
-    }
+    ( Int, Int )
 
 
 type alias Square =
@@ -114,9 +112,9 @@ createSquare { rows, columns, size } index random =
             floor ((random * 2 - 1) * toFloat row * 0.3 * damp)
 
         position =
-            { x = modBy columns index * size + offset
-            , y = (index // columns) * size + offset
-            }
+            ( modBy columns index * size + offset
+            , (index // columns) * size + offset
+            )
     in
     Square size position offset
 
@@ -128,24 +126,26 @@ createSquare { rows, columns, size } index random =
 viewSquare : Square -> Svg Msg
 viewSquare { size, position, rotation } =
     let
-        tf =
-            "rotate("
-                ++ String.fromInt rotation
-                ++ " "
-                ++ String.fromInt (position.x + size // 2)
-                ++ " "
-                ++ String.fromInt (position.y + size // 2)
-                ++ ")"
+        ( posX, posY ) =
+            position
     in
     rect
-        [ x (String.fromInt position.x)
-        , y (String.fromInt position.y)
+        [ x (String.fromInt posX)
+        , y (String.fromInt posY)
         , width (String.fromInt size)
         , height (String.fromInt size)
         , fill "none"
         , stroke "black"
         , strokeWidth "2"
-        , transform tf
+        , transform
+            ("rotate("
+                ++ String.fromInt rotation
+                ++ " "
+                ++ String.fromInt (posX + size // 2)
+                ++ " "
+                ++ String.fromInt (posY + size // 2)
+                ++ ")"
+            )
         ]
         []
 
